@@ -272,6 +272,16 @@ require('lazy').setup({
   -- options to `gitsigns.nvim`.
   --
   -- See `:help gitsigns` to understand what the configuration keys do
+  { -- LazyGit integration
+    'kdheepak/lazygit.nvim',
+    lazy = true,
+    cmd = { 'LazyGit', 'LazyGitConfig', 'LazyGitCurrentFile', 'LazyGitFilter', 'LazyGitFilterCurrentFile' },
+    dependencies = { 'nvim-lua/plenary.nvim' },
+    keys = {
+      { '<leader>gg', '<cmd>LazyGit<cr>', desc = '[G]it Lazy[G]it' },
+    },
+  },
+
   { -- Adds git related signs to the gutter, as well as utilities for managing changes
     'lewis6991/gitsigns.nvim',
     opts = {
@@ -348,6 +358,7 @@ require('lazy').setup({
         { '<leader>s', group = '[S]earch' },
         { '<leader>t', group = '[T]oggle' },
         { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } },
+        { '<leader>g', group = '[G]it' },
       },
     },
   },
@@ -942,6 +953,41 @@ require('lazy').setup({
         return '%2l:%-2v'
       end
 
+      -- Override active statusline to include Claude context window usage.
+      -- Reads ~/.claude/ctx-pct.txt written by ~/.claude/statusline-command.sh.
+      ---@diagnostic disable-next-line: duplicate-set-field
+      statusline.active = function()
+        local mode, mode_hl = statusline.section_mode { trunc_width = 120 }
+        local git = statusline.section_git { trunc_width = 75 }
+        local diff = statusline.section_diff { trunc_width = 75 }
+        local diagnostics = statusline.section_diagnostics { trunc_width = 75 }
+        local lsp = statusline.section_lsp { trunc_width = 75 }
+        local filename = statusline.section_filename { trunc_width = 140 }
+        local fileinfo = statusline.section_fileinfo { trunc_width = 120 }
+        local location = statusline.section_location { trunc_width = 75 }
+        local search = statusline.section_searchcount { trunc_width = 75 }
+
+        local ctx = ''
+        local f = io.open(vim.fn.expand '~/.claude/ctx-pct.txt', 'r')
+        if f then
+          local pct = f:read '*l'
+          f:close()
+          if pct and pct ~= '' then
+            ctx = 'claude:' .. pct .. '%'
+          end
+        end
+
+        return statusline.combine_groups {
+          { hl = mode_hl, strings = { mode } },
+          { hl = 'MiniStatuslineDevinfo', strings = { git, diff, diagnostics, lsp } },
+          '%<',
+          { hl = 'MiniStatuslineFilename', strings = { filename } },
+          '%=',
+          { hl = 'MiniStatuslineDevinfo', strings = { fileinfo, ctx } },
+          { hl = mode_hl, strings = { search, location } },
+        }
+      end
+
       -- ... and there is more!
       --  Check out: https://github.com/echasnovski/mini.nvim
     end,
@@ -959,7 +1005,25 @@ require('lazy').setup({
       end
 
       treesitter.setup {
-        ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'typescript', 'tsx', 'javascript', 'jsdoc', 'json', 'css' },
+        ensure_installed = {
+          'bash',
+          'c',
+          'diff',
+          'html',
+          'lua',
+          'luadoc',
+          'markdown',
+          'markdown_inline',
+          'query',
+          'vim',
+          'vimdoc',
+          'typescript',
+          'tsx',
+          'javascript',
+          'jsdoc',
+          'json',
+          'css',
+        },
         -- Autoinstall languages that are not installed
         auto_install = true,
         highlight = {
